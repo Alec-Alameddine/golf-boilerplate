@@ -1,5 +1,5 @@
-import pygame as pg
 import math
+import pygame as pg
 
 SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 800
@@ -13,7 +13,7 @@ START_X = int(.5 * SCREEN_WIDTH)
 START_Y = int(.99 * SCREEN_HEIGHT)
 
 
-pg.init()
+pg.font.init()
 strokeFont = pg.font.SysFont("monospace", 50)
 STROKECOLOR = (255, 255, 0)
 
@@ -43,8 +43,8 @@ class Ball(object):
     def path(x, y, p, a, t):
         vx, vy = p * math.cos(a), p * math.sin(a)  #Velocities
         dx, dy = vx * t, vy * t - 4.9 * t ** 2 #Distances Traveled
-        print('		x-pos: %spx' % str(round(dx + x)))
-        print('		y-pos: %spx' % str(round(abs(dy - y))))
+        print(f'    x-pos: {dx + x:.0f}px')
+        print(f'    y-pos: {abs(dy - y):.0f}px')
 
         return round(dx + x), round(y - dy)
 
@@ -105,10 +105,10 @@ def angle(cursor_pos):
     q = ball.quadrant(x,y,xm,ym)
     if q: angle = math.pi*math.floor(q/2) - angle
 
-    if round(angle*180/math.pi) == 360:
+    if round(angle*deg) == 360:
         angle = 0
 
-    if x > xm and round(angle*180/math.pi) == 0:
+    if x > xm and round(angle*deg) == 0:
         angle = math.pi
 
     return angle
@@ -116,13 +116,13 @@ def angle(cursor_pos):
 
 def arrow(screen, lcolor, tricolor, start, end, trirad):
     pg.draw.line(screen, lcolor, start, end, 2)
-    rotation = math.degrees(math.atan2(start[1] - end[1], end[0] - start[0])) + 90
-    pg.draw.polygon(screen, tricolor, ((end[0] + trirad * math.sin(math.radians(rotation)),
-                                        end[1] + trirad * math.cos(math.radians(rotation))),
-                                       (end[0] + trirad * math.sin(math.radians(rotation - 120)),
-                                        end[1] + trirad * math.cos(math.radians(rotation - 120))),
-                                       (end[0] + trirad * math.sin(math.radians(rotation + 120)),
-                                        end[1] + trirad * math.cos(math.radians(rotation + 120)))))
+    rotation = (math.atan2(start[1] - end[1], end[0] - start[0])) + math.pi/2
+    pg.draw.polygon(screen, tricolor, ((end[0] + trirad * math.sin(rotation),
+                                        end[1] + trirad * math.cos(rotation)),
+                                       (end[0] + trirad * math.sin(rotation - 120*rad),
+                                        end[1] + trirad * math.cos(rotation - 120*rad)),
+                                       (end[0] + trirad * math.sin(rotation + 120*rad),
+                                        end[1] + trirad * math.cos(rotation + 120*rad))))
 setattr(pg.draw, 'arrow', arrow)
 
 
@@ -130,6 +130,7 @@ def distance(x,y):
     return math.sqrt(x**2 + y**2)
 
 def initialize():
+    pg.init()
     pg.display.set_caption('Golf')
     window = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pg.event.set_grab(True)
@@ -137,7 +138,7 @@ def initialize():
 
     return window
 
-
+rad, deg = math.pi/180, 180/math.pi
 x, y, time, power, ang, strokes = 0, 0, 0, 0, 0, 0
 xb, yb = None, None
 shoot, penalty = False, False
@@ -150,7 +151,7 @@ BARRIER = 1
 window = initialize()
 try:
     while not quit:
-        seconds=(pg.time.get_ticks()-p_ticks)/1000
+        seconds = (pg.time.get_ticks()-p_ticks)/1000
         if seconds > 1.2: penalty = False
 
         cursor_pos = pg.mouse.get_pos()
@@ -163,7 +164,7 @@ try:
             power_display = round(
                 distance(line_ball_x, line_ball_y) * POWER_MULTIPLIER / 10)
 
-            angle_display = round(angle(cursor_pos) * 180 / math.pi)
+            angle_display = round(angle(cursor_pos) * deg)
 
         if shoot:
             if ball.y < SCREEN_HEIGHT:
@@ -203,7 +204,7 @@ try:
                     print('\n\nBall Hit!')
                     print('\npower: %sN' % round(power, 2))
                     ang = angle(cursor_pos)
-                    print('angle: %s°' % round(ang * 180 / math.pi, 2))
+                    print('angle: %s°' % round(ang * deg, 2))
                     print('cos(a): %s' % round(math.cos(ang), 2)), print('sin(a): %s' % round(math.sin(ang), 2))
                     strokes += 1
 
