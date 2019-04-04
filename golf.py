@@ -8,6 +8,7 @@ LINE_COLOR = (0, 0, 255)
 ALINE_COLOR = (0, 0, 0)
 POWER_MULTIPLIER = .85
 SPEED_MULTIPLIER = 2
+BARRIER = 1
 
 START_X = int(.5 * SCREEN_WIDTH)
 START_Y = int(.99 * SCREEN_HEIGHT)
@@ -146,7 +147,6 @@ p_ticks = 0
 
 ball = Ball(START_X, START_Y)
 quit = False
-BARRIER = 1
 
 window = initialize()
 try:
