@@ -6,10 +6,7 @@ SCREEN_HEIGHT = 800
 WINDOW_COLOR = (100, 100, 100)
 LINE_COLOR = (0, 0, 255)
 ALINE_COLOR = (0, 0, 0)
-POWER_MULTIPLIER = .85
-SPEED_MULTIPLIER = 2
 BARRIER = 1
-
 START_X = int(.5 * SCREEN_WIDTH)
 START_Y = int(.99 * SCREEN_HEIGHT)
 
@@ -27,6 +24,12 @@ ANGLECOLOR = (0, 255, 0)
 penaltyFont = pg.font.SysFont("georgia", 40, bold=True)
 PENALTYCOLOR = (255, 0, 0)
 
+speedMultiplierFont = pg.font.SysFont("courier new", 13)
+SPEEDMULTIPLIERCOLOR = (255, 0, 0)
+
+powerMultiplierFont = pg.font.SysFont("courier new", 13)
+POWERMULTIPLIERCOLOR = (255, 0, 0)
+
 
 class Ball(object):
     def __init__(self, x, y):
@@ -41,9 +44,12 @@ class Ball(object):
         pg.draw.circle(window, self.color, (self.x, self.y), self.radius - int(.4 * self.radius))
 
     @staticmethod
-    def path(x, y, p, a, t):
+    def path(x, y, p, a, t, bounce=False):
         vx, vy = p * math.cos(a), p * math.sin(a)  #Velocities
-        dx, dy = vx * t, vy * t - 4.9 * t ** 2 #Distances Traveled
+        dx, dy = vx * t, vy * t - gravity(t)  #Distances Traveled
+
+        if bounce: pass
+
         print(f'    x-pos: {dx + x:.0f}px')
         print(f'    y-pos: {abs(dy - y):.0f}px')
 
@@ -91,6 +97,16 @@ def draw_window():
         penalty_rect = penalty_label.get_rect(center=(SCREEN_WIDTH/2, .225*SCREEN_HEIGHT))
         window.blit(penalty_label, penalty_rect)
 
+    speed_multiplier_text = 'Speed: {:2.2f} m/s'.format(speed_multiplier)
+    speed_multiplier_label = speedMultiplierFont.render(speed_multiplier_text, 1, SPEEDMULTIPLIERCOLOR)
+    window.blit(speed_multiplier_label, (.91*SCREEN_WIDTH,.98*SCREEN_HEIGHT))
+
+    power_multiplier_text = f'Strength: {int(power_multiplier*100)}%'
+    power_multiplier_label = powerMultiplierFont.render(power_multiplier_text, 1, POWERMULTIPLIERCOLOR)
+    window.blit(power_multiplier_label, (.01*SCREEN_WIDTH,.98*SCREEN_HEIGHT))
+
+    #strength
+
     pg.display.flip()
 
 
@@ -109,10 +125,13 @@ def angle(cursor_pos):
     if round(angle*deg) == 360:
         angle = 0
 
-    if x > xm and round(angle*deg) == 0:
+    if x > xm and not round(angle*deg):
         angle = math.pi
 
     return angle
+
+def gravity(t):
+    return 4.9*t**2
 
 
 def arrow(screen, lcolor, tricolor, start, end, trirad):
@@ -127,7 +146,7 @@ def arrow(screen, lcolor, tricolor, start, end, trirad):
 setattr(pg.draw, 'arrow', arrow)
 
 
-def distance(x,y):
+def distance(x, y):
     return math.sqrt(x**2 + y**2)
 
 def initialize():
@@ -148,9 +167,15 @@ p_ticks = 0
 ball = Ball(START_X, START_Y)
 quit = False
 
+strength_dict = {0: .01, 1: .02, 2: .04, 3: .08, 4: .16, 5: .25, 6: .50, 7: .75, 8: 1}; stkey = 6
+speed_dict = {0: .25, 1: .5, 2: 1, 3: 1.5, 4: 2, 5: 2.5, 6: 3, 7: 3.5, 8: 4, 9: 5, 10: 7.5, 11: 10}; spkey = 4
+
 window = initialize()
 try:
     while not quit:
+        power_multiplier = strength_dict[stkey]
+        speed_multiplier = speed_dict[spkey]
+
         seconds = (pg.time.get_ticks()-p_ticks)/1000
         if seconds > 1.2: penalty = False
 
@@ -162,15 +187,15 @@ try:
 
         if not shoot:
             power_display = round(
-                distance(line_ball_x, line_ball_y) * POWER_MULTIPLIER / 10)
+                distance(line_ball_x, line_ball_y) * power_multiplier/6)
 
             angle_display = round(angle(cursor_pos) * deg)
 
         if shoot:
-            if ball.y < SCREEN_HEIGHT:
+            time += .3 * speed_multiplier
+            print('\n   time: %ss' % round(time, 2))
+            if ball.y <= START_Y:
                 if BARRIER < ball.x < SCREEN_WIDTH:
-                    time += .3 * SPEED_MULTIPLIER
-                    print('\n	time: %ss' % round(time, 2))
                     po = ball.path(x, y, power, ang, time)
                     ball.x, ball.y = po[0], po[1]
                 else:
@@ -191,16 +216,34 @@ try:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 quit = True
+
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     quit = True
+
+                if event.key == pg.K_RIGHT:
+                    if speed_multiplier != 10:
+                        spkey += 1
+
+                if event.key == pg.K_LEFT:
+                    if speed_multiplier != .25:
+                        spkey -= 1
+
+                if event.key == pg.K_UP:
+                    if power_multiplier != 1:
+                        stkey += 1
+
+                if event.key == pg.K_DOWN:
+                    if power_multiplier != .01:
+                        stkey -= 1
+
             if event.type == pg.MOUSEBUTTONDOWN:
                 if not shoot:
                     shoot = True
                     x, y = ball.x, ball.y
                     xb, yb = ball.x, ball.y
                     time, power = 0, (
-                        distance(line_ball_x, line_ball_y)) * POWER_MULTIPLIER / 10
+                        distance(line_ball_x, line_ball_y)) * power_multiplier/6
                     print('\n\nBall Hit!')
                     print('\npower: %sN' % round(power, 2))
                     ang = angle(cursor_pos)
