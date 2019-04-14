@@ -1,12 +1,17 @@
 import math
 import pygame as pg
 
+
 SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 800
 WINDOW_COLOR = (100, 100, 100)
+
 LINE_COLOR = (0, 0, 255)
 ALINE_COLOR = (0, 0, 0)
+
 BARRIER = 1
+BOUNCE_FUZZ = 0
+
 START_X = int(.5 * SCREEN_WIDTH)
 START_Y = int(.99 * SCREEN_HEIGHT)
 
@@ -32,31 +37,63 @@ POWERMULTIPLIERCOLOR = (255, 0, 0)
 
 
 class Ball(object):
-    def __init__(self, x, y):
+    def __init__(self, x, y, dx = 0, dy = 0, brate = .8):
         self.x = x
         self.y = y
+        self.dx = dx
+        self.dy = dy
+        self.brate = brate
         self.radius = 10
         self.color = (255, 255, 255)
         self.outlinecolor = (255, 0, 0)
 
     def show(self, window):
-        pg.draw.circle(window, self.outlinecolor, (self.x, self.y), self.radius)
-        pg.draw.circle(window, self.color, (self.x, self.y), self.radius - int(.4 * self.radius))
+        pg.draw.circle(window, self.outlinecolor, (int(self.x), int(self.y)), self.radius)
+        pg.draw.circle(window, self.color, (int(self.x), int(self.y)), self.radius - int(.4 * self.radius))
+
+    def update(self, update_frame):
+        update_frame += 1
+        ax = 0
+        ay = 9.81
+
+        dt = 0.2 * speed_multiplier
+        self.vx += ax * dt
+        self.vy += ay * dt
+
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+
+        bounced = False
+        if self.y + self.radius > SCREEN_HEIGHT:
+            self.y = SCREEN_HEIGHT - self.radius
+            self.vy = -self.vy
+            bounced = True
+
+        # if (self.x - self.radius < BARRIER):
+        #     self.x = BARRIER + self.radius
+        #     self.vx = -self.vx
+        #     bounced = True
+
+        # if (self.x + self.radius > SCREEN_WIDTH - BARRIER):
+        #     self.x = SCREEN_WIDTH - BARRIER - self.radius
+        #     self.vx = -self.vx
+        #     bounced = True
+
+        if bounced:
+            self.vx *= self.brate
+            self.vy *= self.brate
+
+        print(f'\n    Update Frame: {update_frame}\n'
+              '    x-pos: %spx' % round(self.x),
+              '    y-pos: %spx' % round(self.y),
+              '    x-vel: %spx/u' % round(self.vx),
+              '    y-vel: %spx/u' % round(self.vy),
+              sep='\n')
+
+        return update_frame
 
     @staticmethod
-    def path(x, y, p, a, t, bounce=False):
-        vx, vy = p * math.cos(a), p * math.sin(a)  #Velocities
-        dx, dy = vx * t, vy * t - gravity(t)  #Distances Traveled
-
-        if bounce: pass
-
-        print(f'    x-pos: {dx + x:.0f}px')
-        print(f'    y-pos: {abs(dy - y):.0f}px')
-
-        return round(dx + x), round(y - dy)
-
-    @staticmethod
-    def quadrant(x,y,xm,ym):
+    def quadrant(x, y, xm, ym):
         if ym < y and xm > x:
             return 1
         elif ym < y and xm < x:
@@ -130,9 +167,6 @@ def angle(cursor_pos):
 
     return angle
 
-def gravity(t):
-    return 4.9*t**2
-
 
 def arrow(screen, lcolor, tricolor, start, end, trirad):
     pg.draw.line(screen, lcolor, start, end, 2)
@@ -159,10 +193,10 @@ def initialize():
     return window
 
 rad, deg = math.pi/180, 180/math.pi
-x, y, time, power, ang, strokes = 0, 0, 0, 0, 0, 0
+x, y, power, ang, strokes = [0]*5
 xb, yb = None, None
 shoot, penalty = False, False
-p_ticks = 0
+p_ticks, update_frame = 0, 0
 
 ball = Ball(START_X, START_Y)
 quit = False
@@ -171,91 +205,88 @@ strength_dict = {0: .01, 1: .02, 2: .04, 3: .08, 4: .16, 5: .25, 6: .50, 7: .75,
 speed_dict = {0: .25, 1: .5, 2: 1, 3: 1.5, 4: 2, 5: 2.5, 6: 3, 7: 3.5, 8: 4, 9: 5, 10: 7.5, 11: 10}; spkey = 4
 
 window = initialize()
-try:
-    while not quit:
-        power_multiplier = strength_dict[stkey]
-        speed_multiplier = speed_dict[spkey]
+while not quit:
+    power_multiplier = strength_dict[stkey]
+    speed_multiplier = speed_dict[spkey]
 
-        seconds = (pg.time.get_ticks()-p_ticks)/1000
-        if seconds > 1.2: penalty = False
+    seconds = (pg.time.get_ticks()-p_ticks)/1000
+    if seconds > 1.2: penalty = False
 
-        cursor_pos = pg.mouse.get_pos()
-        line = [(ball.x, ball.y), cursor_pos]
-        line_ball_x, line_ball_y = cursor_pos[0] - ball.x, cursor_pos[1] - ball.y
+    cursor_pos = pg.mouse.get_pos()
+    line = [(ball.x, ball.y), cursor_pos]
+    line_ball_x, line_ball_y = cursor_pos[0] - ball.x, cursor_pos[1] - ball.y
 
-        aline = [(ball.x, ball.y), (ball.x + .015 * SCREEN_WIDTH, ball.y)]
+    aline = [(ball.x, ball.y), (ball.x + .015 * SCREEN_WIDTH, ball.y)]
 
-        if not shoot:
-            power_display = round(
-                distance(line_ball_x, line_ball_y) * power_multiplier/6)
+    if not shoot:
+        power_display = round(
+            distance(line_ball_x, line_ball_y) * power_multiplier/5)
 
-            angle_display = round(angle(cursor_pos) * deg)
+        angle_display = round(angle(cursor_pos) * deg)
 
-        if shoot:
-            time += .3 * speed_multiplier
-            print('\n   time: %ss' % round(time, 2))
-            if ball.y <= START_Y:
-                if BARRIER < ball.x < SCREEN_WIDTH:
-                    po = ball.path(x, y, power, ang, time)
-                    ball.x, ball.y = po[0], po[1]
-                else:
-                    print('Out of Bounds!')
-                    penalty = True
-                    p_ticks = pg.time.get_ticks()
-                    strokes += 1
-                    shoot = False
-                    if BARRIER < xb < SCREEN_WIDTH:
-                        ball.x = xb
-                    else:
-                        ball.x = START_X
-                    ball.y = yb
+    else:
+        if abs(ball.vy) < 5 and abs(ball.vx) < 1 and abs(ball.y - (START_Y - 2*BARRIER)) <= BOUNCE_FUZZ:
+            shoot = False
+            ball.y = START_Y
+            print('\nThe ball has come to a rest!')
+            update_frame = 0
+        else:
+            update_frame = ball.update(update_frame)
+
+        if not BARRIER < ball.x < SCREEN_WIDTH:
+            shoot = False
+            print('\nOut of Bounds!')
+            penalty = True
+            p_ticks = pg.time.get_ticks()
+            strokes += 1
+
+            if BARRIER < xb < SCREEN_WIDTH:
+                ball.x = xb
             else:
-                shoot = False
-                ball.y = START_Y
+                ball.x = START_X
+            ball.y = yb
 
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            quit = True
+
+        if event.type == pg.KEYDOWN:
+            if event.key == pg.K_ESCAPE:
                 quit = True
 
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_ESCAPE:
-                    quit = True
+            if event.key == pg.K_RIGHT:
+                if spkey != max(speed_dict):
+                    spkey += 1
 
-                if event.key == pg.K_RIGHT:
-                    if speed_multiplier != 10:
-                        spkey += 1
+            if event.key == pg.K_LEFT:
+                if spkey != min(speed_dict):
+                    spkey -= 1
 
-                if event.key == pg.K_LEFT:
-                    if speed_multiplier != .25:
-                        spkey -= 1
+            if event.key == pg.K_UP:
+                if stkey != max(strength_dict):
+                    stkey += 1
 
-                if event.key == pg.K_UP:
-                    if power_multiplier != 1:
-                        stkey += 1
+            if event.key == pg.K_DOWN:
+                if stkey != min(strength_dict):
+                    stkey -= 1
 
-                if event.key == pg.K_DOWN:
-                    if power_multiplier != .01:
-                        stkey -= 1
+        if event.type == pg.MOUSEBUTTONDOWN:
+            if not shoot:
+                shoot = True
+                x, y = ball.x, ball.y
+                xb, yb = ball.x, ball.y
+                power = (distance(line_ball_x, line_ball_y)) / 10
+                print('\n\nBall Hit!')
+                print('\npower: %sN' % round(power, 2))
+                ang = angle(cursor_pos)
+                print('angle: %s°' % round(ang * deg, 2))
+                print('cos(a): %s' % round(math.cos(ang), 2)), print('sin(a): %s' % round(math.sin(ang), 2))
 
-            if event.type == pg.MOUSEBUTTONDOWN:
-                if not shoot:
-                    shoot = True
-                    x, y = ball.x, ball.y
-                    xb, yb = ball.x, ball.y
-                    time, power = 0, (
-                        distance(line_ball_x, line_ball_y)) * power_multiplier/6
-                    print('\n\nBall Hit!')
-                    print('\npower: %sN' % round(power, 2))
-                    ang = angle(cursor_pos)
-                    print('angle: %s°' % round(ang * deg, 2))
-                    print('cos(a): %s' % round(math.cos(ang), 2)), print('sin(a): %s' % round(math.sin(ang), 2))
-                    strokes += 1
+                ball.vx, ball.vy = power * math.cos(ang), -power * math.sin(ang)
 
-        draw_window()
+                strokes += 1
 
-    print("\nShutting down...")
-    pg.quit()
+    draw_window()
 
-except Exception as error:
-    print(f'A fatal error ({error}) has occurred. The program is shutting down.')
-    pg.quit()
+print("\nShutting down...")
+pg.quit()
