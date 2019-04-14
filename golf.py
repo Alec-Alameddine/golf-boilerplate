@@ -83,12 +83,12 @@ class Ball(object):
             self.vx *= self.brate
             self.vy *= self.brate
 
-        print(f'\n    Update Frame: {update_frame}\n'
-              '    x-pos: %spx' % round(self.x),
-              '    y-pos: %spx' % round(self.y),
-              '    x-vel: %spx/u' % round(self.vx),
-              '    y-vel: %spx/u' % round(self.vy),
-              sep='\n')
+        print(f'\n    Update Frame: {update_frame}',
+               '    x-pos: %spx' % round(self.x),
+               '    y-pos: %spx' % round(self.y),
+               '    x-vel: %spx/u' % round(self.vx),
+               '    y-vel: %spx/u' % round(self.vy),
+               sep='\n')
 
         return update_frame
 
@@ -109,6 +109,7 @@ class Ball(object):
 def draw_window():
     window.fill(WINDOW_COLOR)
     ball.show(window)
+
     if not shoot:
         pg.draw.arrow(window, ALINE_COLOR, ALINE_COLOR, aline[0], aline[1], 5)
         pg.draw.arrow(window, LINE_COLOR, LINE_COLOR, line[0], line[1], 5)
@@ -275,7 +276,7 @@ while not quit:
                 shoot = True
                 x, y = ball.x, ball.y
                 xb, yb = ball.x, ball.y
-                power = (distance(line_ball_x, line_ball_y)) / 10
+                power = power_multiplier/4 * distance(line_ball_x, line_ball_y)
                 print('\n\nBall Hit!')
                 print('\npower: %sN' % round(power, 2))
                 ang = angle(cursor_pos)
