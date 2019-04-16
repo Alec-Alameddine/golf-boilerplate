@@ -21,6 +21,7 @@ class Constants:
     START_Y = int(.99 * SCREEN_HEIGHT)
 
     AIR_DRAG = .3
+    GRAVITY = 9.80665
 
 #Add class Fonts
 pg.font.init()
@@ -63,7 +64,7 @@ class Ball(object):
         update_frame += 1
 
         ax = 0
-        ay = 9.81
+        ay = GRAVITY
 
         dt = Constants.GAME_SPEED
         self.vx += ax * dt
