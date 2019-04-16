@@ -64,7 +64,7 @@ class Ball(object):
         update_frame += 1
 
         ax = 0
-        ay = GRAVITY
+        ay = Constants.GRAVITY
 
         dt = Constants.GAME_SPEED
         self.vx += ax * dt
