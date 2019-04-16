@@ -1,5 +1,4 @@
 import math
-
 import pygame as pg
 
 
@@ -18,6 +17,8 @@ BOUNCE_FUZZ = 0
 
 START_X = int(.5 * SCREEN_WIDTH)
 START_Y = int(.99 * SCREEN_HEIGHT)
+
+DRAG_CONSTANT = .3
 
 
 pg.font.init()
@@ -67,14 +68,12 @@ class Ball(object):
         self.vy += ay * dt
 
         if resist_multiplier:
-            drag = 6*math.pi * self.radius * resist_multiplier
+            drag = 6*math.pi * self.radius * resist_multiplier * DRAG_CONSTANT
             air_resist_x = -drag * self.vx / self.mass
             air_resist_y = -drag * self.vy / self.mass
 
-            ax += air_resist_x
-            ay += air_resist_y
-            self.vx += air_resist_x
-            self.vy += air_resist_y
+            self.vx += air_resist_x/dt
+            self.vy += air_resist_y/dt
 
         self.x += self.vx * dt
         self.y += self.vy * dt
@@ -126,7 +125,18 @@ def draw_window():
     clock.tick(TICKRATE)
 
     window.fill(WINDOW_COLOR)
-    ball.show(window)
+
+    resist_multiplier_text = 'Air Resistance: {:2.2f} m/s'.format(resist_multiplier)
+    resist_multiplier_label = resistMultiplierFont.render(resist_multiplier_text, 1, RESISTMULTIPLIERCOLOR)
+    pg.draw.rect(window, (0, 0, 0), (.8875*SCREEN_WIDTH, .98*SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT))
+    window.blit(resist_multiplier_label, (.8925*SCREEN_WIDTH, .98*SCREEN_HEIGHT))
+
+    power_multiplier_text = f'Strength: {int(power_multiplier*100)}%'
+    power_multiplier_label = powerMultiplierFont.render(power_multiplier_text, 1, POWERMULTIPLIERCOLOR)
+    pg.draw.rect(window, (0, 0, 0), (10**-4*SCREEN_WIDTH, .98*SCREEN_HEIGHT, .1125*SCREEN_WIDTH, SCREEN_HEIGHT))
+    window.blit(power_multiplier_label, (.0225*SCREEN_WIDTH, .98*SCREEN_HEIGHT))
+
+    #Put Lines and Add Collisions
 
     if not shoot:
         pg.draw.arrow(window, ALINE_COLOR, ALINE_COLOR, aline[0], aline[1], 5)
@@ -153,13 +163,7 @@ def draw_window():
         penalty_rect = penalty_label.get_rect(center=(SCREEN_WIDTH/2, .225*SCREEN_HEIGHT))
         window.blit(penalty_label, penalty_rect)
 
-    resist_multiplier_text = 'Air Resistance: {:2.2f} m/s'.format(resist_multiplier)
-    resist_multiplier_label = resistMultiplierFont.render(resist_multiplier_text, 1, RESISTMULTIPLIERCOLOR)
-    window.blit(resist_multiplier_label, (.89*SCREEN_WIDTH, .98*SCREEN_HEIGHT))
-
-    power_multiplier_text = f'Strength: {int(power_multiplier*100)}%'
-    power_multiplier_label = powerMultiplierFont.render(power_multiplier_text, 1, POWERMULTIPLIERCOLOR)
-    window.blit(power_multiplier_label, (.005*SCREEN_WIDTH, .98*SCREEN_HEIGHT))
+    ball.show(window)
 
     pg.display.flip()
 
