@@ -1,7 +1,6 @@
 import math
 
 import pygame as pg
-from scipy.constants import g as gravity
 
 
 SCREEN_WIDTH = 1500
@@ -61,7 +60,7 @@ class Ball(object):
         update_frame += 1
 
         ax = 0
-        ay = gravity
+        ay = 9.81
 
         dt = GAME_SPEED
         self.vx += ax * dt
