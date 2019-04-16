@@ -134,10 +134,10 @@ def draw_window():
     pg.draw.rect(window, (0, 0, 0), (.8875*Constants.SCREEN_WIDTH, .98*Constants.SCREEN_HEIGHT, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT))
     window.blit(resist_multiplier_label, (.8925*Constants.SCREEN_WIDTH, .98*Constants.SCREEN_HEIGHT))
 
-    power_multiplier_text = f'Strength: {int(power_multiplier*100)}%'
+    power_multiplier_text = f'Swing Strength: {int(power_multiplier*100)}%'
     power_multiplier_label = powerMultiplierFont.render(power_multiplier_text, 1, POWERMULTIPLIERCOLOR)
     pg.draw.rect(window, (0, 0, 0), (10**-4*Constants.SCREEN_WIDTH, .98*Constants.SCREEN_HEIGHT, .1125*Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT))
-    window.blit(power_multiplier_label, (.0225*Constants.SCREEN_WIDTH, .98*Constants.SCREEN_HEIGHT))
+    window.blit(power_multiplier_label, (.005*Constants.SCREEN_WIDTH, .98*Constants.SCREEN_HEIGHT))
 
     #Put Lines and Add Collisions
 
