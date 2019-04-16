@@ -1,10 +1,15 @@
 import math
+
 import pygame as pg
+from scipy.constants import g as gravity
 
 
 SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 800
 WINDOW_COLOR = (100, 100, 100)
+
+TICKRATE = 60
+GAME_SPEED = .35
 
 LINE_COLOR = (0, 0, 255)
 ALINE_COLOR = (0, 0, 0)
@@ -29,21 +34,22 @@ ANGLECOLOR = (0, 255, 0)
 penaltyFont = pg.font.SysFont("georgia", 40, bold=True)
 PENALTYCOLOR = (255, 0, 0)
 
-speedMultiplierFont = pg.font.SysFont("courier new", 13)
-SPEEDMULTIPLIERCOLOR = (255, 0, 0)
+resistMultiplierFont = pg.font.SysFont("courier new", 13)
+RESISTMULTIPLIERCOLOR = (255, 0, 0)
 
 powerMultiplierFont = pg.font.SysFont("courier new", 13)
 POWERMULTIPLIERCOLOR = (255, 0, 0)
 
 
 class Ball(object):
-    def __init__(self, x, y, dx = 0, dy = 0, brate = .8):
+    def __init__(self, x, y, dx = 0, dy = 0, bounce = .8, radius = 10):
         self.x = x
         self.y = y
         self.dx = dx
         self.dy = dy
-        self.brate = brate
-        self.radius = 10
+        self.bounce = bounce
+        self.radius = radius
+        self.mass = 4/3 * math.pi * self.radius**3
         self.color = (255, 255, 255)
         self.outlinecolor = (255, 0, 0)
 
@@ -53,12 +59,23 @@ class Ball(object):
 
     def update(self, update_frame):
         update_frame += 1
-        ax = 0
-        ay = 9.81
 
-        dt = 0.2 * speed_multiplier
+        ax = 0
+        ay = gravity
+
+        dt = GAME_SPEED
         self.vx += ax * dt
         self.vy += ay * dt
+
+        if resist_multiplier:
+            drag = 6*math.pi * self.radius * resist_multiplier
+            air_resist_x = -drag * self.vx / self.mass
+            air_resist_y = -drag * self.vy / self.mass
+
+            ax += air_resist_x
+            ay += air_resist_y
+            self.vx += air_resist_x
+            self.vy += air_resist_y
 
         self.x += self.vx * dt
         self.y += self.vy * dt
@@ -80,15 +97,15 @@ class Ball(object):
         #     bounced = True
 
         if bounced:
-            self.vx *= self.brate
-            self.vy *= self.brate
+            self.vx *= self.bounce
+            self.vy *= self.bounce
 
         print(f'\n    Update Frame: {update_frame}',
-               '    x-pos: %spx' % round(self.x),
-               '    y-pos: %spx' % round(self.y),
-               '    x-vel: %spx/u' % round(self.vx),
-               '    y-vel: %spx/u' % round(self.vy),
-               sep='\n')
+               '        x-pos: %spx' % round(self.x),
+               '        y-pos: %spx' % round(self.y),
+               '        x-vel: %spx/u' % round(self.vx),
+               '        y-vel: %spx/u' % round(self.vy),
+               sep='\n', end='\n\n')
 
         return update_frame
 
@@ -107,6 +124,8 @@ class Ball(object):
 
 
 def draw_window():
+    clock.tick(TICKRATE)
+
     window.fill(WINDOW_COLOR)
     ball.show(window)
 
@@ -130,20 +149,18 @@ def draw_window():
     if not shoot: window.blit(angle_label, (ball.x - .06 * SCREEN_WIDTH, ball.y - .01 * SCREEN_HEIGHT))
 
     if penalty:
-        penalty_text = 'Out of Bounds! +1 Stroke'
+        penalty_text = f'Out of Bounds! +1 Stroke'
         penalty_label = penaltyFont.render(penalty_text, 1, PENALTYCOLOR)
         penalty_rect = penalty_label.get_rect(center=(SCREEN_WIDTH/2, .225*SCREEN_HEIGHT))
         window.blit(penalty_label, penalty_rect)
 
-    speed_multiplier_text = 'Speed: {:2.2f} m/s'.format(speed_multiplier)
-    speed_multiplier_label = speedMultiplierFont.render(speed_multiplier_text, 1, SPEEDMULTIPLIERCOLOR)
-    window.blit(speed_multiplier_label, (.91*SCREEN_WIDTH,.98*SCREEN_HEIGHT))
+    resist_multiplier_text = 'Air Resistance: {:2.2f} m/s'.format(resist_multiplier)
+    resist_multiplier_label = resistMultiplierFont.render(resist_multiplier_text, 1, RESISTMULTIPLIERCOLOR)
+    window.blit(resist_multiplier_label, (.89*SCREEN_WIDTH, .98*SCREEN_HEIGHT))
 
     power_multiplier_text = f'Strength: {int(power_multiplier*100)}%'
     power_multiplier_label = powerMultiplierFont.render(power_multiplier_text, 1, POWERMULTIPLIERCOLOR)
-    window.blit(power_multiplier_label, (.01*SCREEN_WIDTH,.98*SCREEN_HEIGHT))
-
-    #strength
+    window.blit(power_multiplier_label, (.005*SCREEN_WIDTH, .98*SCREEN_HEIGHT))
 
     pg.display.flip()
 
@@ -202,13 +219,15 @@ p_ticks, update_frame = 0, 0
 ball = Ball(START_X, START_Y)
 quit = False
 
+clock = pg.time.Clock()
+
 strength_dict = {0: .01, 1: .02, 2: .04, 3: .08, 4: .16, 5: .25, 6: .50, 7: .75, 8: 1}; stkey = 6
-speed_dict = {0: .25, 1: .5, 2: 1, 3: 1.5, 4: 2, 5: 2.5, 6: 3, 7: 3.5, 8: 4, 9: 5, 10: 7.5, 11: 10}; spkey = 4
+resist_dict = {0: 0, 1: .01, 2: .02, 3: .03, 4: .04, 5: .05, 6: .1, 7: .2, 8: .3, 9: .4, 10: .5, 11: .6, 12: .7, 13: .8, 14: .9, 15: 1}; spkey = 7
 
 window = initialize()
 while not quit:
     power_multiplier = strength_dict[stkey]
-    speed_multiplier = speed_dict[spkey]
+    resist_multiplier = resist_dict[spkey]
 
     seconds = (pg.time.get_ticks()-p_ticks)/1000
     if seconds > 1.2: penalty = False
@@ -226,7 +245,7 @@ while not quit:
         angle_display = round(angle(cursor_pos) * deg)
 
     else:
-        if abs(ball.vy) < 5 and abs(ball.vx) < 1 and abs(ball.y - (START_Y - 2*BARRIER)) <= BOUNCE_FUZZ:
+        if (abs(ball.vy) < 5 and abs(ball.vx) < 1 and abs(ball.y - (START_Y - 2)) <= BOUNCE_FUZZ): #or (round(ball.vy) == -9 and not ball.vx):
             shoot = False
             ball.y = START_Y
             print('\nThe ball has come to a rest!')
@@ -236,7 +255,7 @@ while not quit:
 
         if not BARRIER < ball.x < SCREEN_WIDTH:
             shoot = False
-            print('\nOut of Bounds!')
+            print(f'\nOut of Bounds! ({round(ball.x), round(ball.y)})')
             penalty = True
             p_ticks = pg.time.get_ticks()
             strokes += 1
@@ -256,11 +275,11 @@ while not quit:
                 quit = True
 
             if event.key == pg.K_RIGHT:
-                if spkey != max(speed_dict):
+                if spkey != max(resist_dict):
                     spkey += 1
 
             if event.key == pg.K_LEFT:
-                if spkey != min(speed_dict):
+                if spkey != min(resist_dict):
                     spkey -= 1
 
             if event.key == pg.K_UP:
