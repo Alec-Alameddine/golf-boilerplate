@@ -1,5 +1,4 @@
 import math
-
 import pygame as pg
 
 
@@ -7,26 +6,32 @@ class Colors:
 
     BLACK = (0, 0, 0)
     WHITE = (255, 255, 255)
-
     RED = (255, 0, 0)
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
 
     YELLOW = (255, 255, 0)
+    GOLD = (255, 215, 0)
+    GRAY = (100, 100, 100)
+
+    NIGHT =  (20, 24, 82)
+    DAY = (135, 206, 235)
     MOON = (245, 243, 206)
+    SMOKE = (96, 96, 96)
+
 
 
 class Constants:
 
     SCREEN_WIDTH = 1500
     SCREEN_HEIGHT = 800
-    WINDOW_COLOR = (100, 100, 100)
+    WINDOW_COLOR = Colors.NIGHT
 
     TICKRATE = 60
     GAME_SPEED = .35
 
-    LINE_COLOR = (0, 0, 255)
-    ALINE_COLOR = Colors.BLACK
+    LINE_COLOR = Colors.GOLD
+    ALINE_COLOR = Colors.GOLD
 
     X_BOUNDS_BARRIER = 1
     Y_BOUNDS_BARRIER = 1
@@ -70,7 +75,7 @@ class Ball(object):
         self.bounce = bounce
         self.radius = radius
         self.mass = 4/3 * math.pi * self.radius**3
-        self.color = Colors.WHITE
+        self.color = Colors.SMOKE
         self.outlinecolor = Colors.RED
 
     def show(self, window):
@@ -179,7 +184,9 @@ def draw_window():
 
     power_multiplier_text = f'Swing Strength: {int(power_multiplier*100)}%'
     power_multiplier_label = Fonts.powerMultiplierFont.render(power_multiplier_text, 1, Fonts.POWERMULTIPLIERCOLOR)
-    pg.draw.rect(window, Colors.BLACK, (10**-4*Constants.SCREEN_WIDTH, .98*Constants.SCREEN_HEIGHT, .1125*Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT))
+    pg.draw.rect(window, Colors.BLACK, (0, .98*Constants.SCREEN_HEIGHT, .1125*Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT))
+    pg.draw.arrow(window, Colors.MOON, Colors.GREEN, (.1125*Constants.SCREEN_WIDTH, .99*Constants.SCREEN_HEIGHT), (.12*Constants.SCREEN_WIDTH, .99*Constants.SCREEN_HEIGHT), 3, 3)
+    pg.draw.arrow(window, Colors.MOON, Colors.GREEN, (0, .975*Constants.SCREEN_HEIGHT), (.12*Constants.SCREEN_WIDTH, .975*Constants.SCREEN_HEIGHT), 3)
     window.blit(power_multiplier_label, (.005*Constants.SCREEN_WIDTH, .98*Constants.SCREEN_HEIGHT))
 
     if not shoot:
