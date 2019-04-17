@@ -59,6 +59,9 @@ class Fonts:
     penaltyFont = pg.font.SysFont("georgia", 40, bold=True)
     PENALTYCOLOR = Colors.RED
 
+    toggleBoundsFont = pg.font.SysFont("geneva", 20)
+    TOGGLEBOUNDSCOLOR = Colors.RED
+
     resistMultiplierFont = pg.font.SysFont("courier new", 13)
     RESISTMULTIPLIERCOLOR = Colors.RED
 
@@ -67,16 +70,19 @@ class Fonts:
 
 
 class Ball(object):
-    def __init__(self, x, y, dx = 0, dy = 0, bounce = .8, radius = 10):
+    def __init__(self, x, y, dx = 0, dy = 0, bounce = .8, radius = 10, color=Colors.SMOKE, outlinecolor=Colors.RED, density=1):
+        self.color = color
+        self.outlinecolor = outlinecolor
         self.x = x
         self.y = y
         self.dx = dx
         self.dy = dy
+        self.ax = 0
+        self.ay = Constants.GRAVITY
+        self.dt = Constants.GAME_SPEED
         self.bounce = bounce
         self.radius = radius
-        self.mass = 4/3 * math.pi * self.radius**3
-        self.color = Colors.SMOKE
-        self.outlinecolor = Colors.RED
+        self.mass = 4/3 * math.pi * self.radius**3 * density
 
     def show(self, window):
         pg.draw.circle(window, self.outlinecolor, (int(self.x), int(self.y)), self.radius)
@@ -85,23 +91,19 @@ class Ball(object):
     def update(self, update_frame):
         update_frame += 1
 
-        ax = 0
-        ay = Constants.GRAVITY
-
-        dt = Constants.GAME_SPEED
-        self.vx += ax * dt
-        self.vy += ay * dt
+        self.vx += self.ax * self.dt
+        self.vy += self.ay * self.dt
 
         if resist_multiplier:
             drag = 6*math.pi * self.radius * resist_multiplier * Constants.AIR_DRAG
             air_resist_x = -drag * self.vx / self.mass
             air_resist_y = -drag * self.vy / self.mass
 
-            self.vx += air_resist_x/dt
-            self.vy += air_resist_y/dt
+            self.vx += air_resist_x/self.dt
+            self.vy += air_resist_y/self.dt
 
-        self.x += self.vx * dt
-        self.y += self.vy * dt
+        self.x += self.vx * self.dt
+        self.y += self.vy * self.dt
 
         bounced, stop, shoot = False, False, True
 
@@ -123,25 +125,30 @@ class Ball(object):
             self.x = .88*Constants.SCREEN_WIDTH + self.radius
             self.y = .98*Constants.SCREEN_HEIGHT - self.radius
             self.x = .87*Constants.SCREEN_WIDTH + self.radius
-            self.vy, self.vx = -self.vy, -abs(self.vx)
+            self.vy, self.vx = -self.vy, -2 * abs(self.vx)
             bounced = True
 
         if (self.x <= .1175*Constants.SCREEN_WIDTH + self.radius) and (self.y + self.radius >= .98*Constants.SCREEN_HEIGHT):
             self.x = .118*Constants.SCREEN_WIDTH + self.radius
             self.y = .98*Constants.SCREEN_HEIGHT - self.radius
             self.x = .119*Constants.SCREEN_WIDTH + self.radius
-            self.vy, self.vx = -self.vy, abs(self.vx)
+            self.vy, self.vx = -self.vy, 2 * abs(self.vx)
             bounced = True
 
-        # if (self.x - self.radius < Constants.X_BOUNDS_BARRIER):
-        #     self.x = X_BOUNDS_BARRIER + self.radius
-        #     self.vx = -self.vx
-        #     bounced = True
+        if x_bounded:
+            if (self.x - self.radius < Constants.X_BOUNDS_BARRIER):
+                self.x = Constants.X_BOUNDS_BARRIER + self.radius
+                self.vx = -self.vx
+                bounced = True
 
-        # if (self.x + self.radius > Constants.SCREEN_WIDTH - Constants.X_BOUNDS_BARRIER):
-        #     self.x = Constants.SCREEN_WIDTH - Constants.X_BOUNDS_BARRIER - self.radius
-        #     self.vx = -self.vx
-        #     bounced = True
+            if (self.x + self.radius > Constants.SCREEN_WIDTH - Constants.X_BOUNDS_BARRIER):
+                self.x = Constants.SCREEN_WIDTH - Constants.X_BOUNDS_BARRIER - self.radius
+                self.vx = -self.vx
+                bounced = True
+
+        if self.vx > 1000:
+            self.vx = 1000
+            self.y = Constants.SCREEN_HEIGHT/4
 
         if bounced:
             self.vx *= self.bounce
@@ -214,6 +221,11 @@ def draw_window():
         penalty_rect = penalty_label.get_rect(center=(Constants.SCREEN_WIDTH/2, .225*Constants.SCREEN_HEIGHT))
         window.blit(penalty_label, penalty_rect)
 
+        toggle_bounds_text = "Use [b] to toggle bounds"
+        toggle_bounds_label = Fonts.toggleBoundsFont.render(toggle_bounds_text, 1, Fonts.TOGGLEBOUNDSCOLOR)
+        toggle_bounds_rect = toggle_bounds_label.get_rect(center=(Constants.SCREEN_WIDTH/2, .275*Constants.SCREEN_HEIGHT))
+        window.blit(toggle_bounds_label, toggle_bounds_rect)
+
     ball.show(window)
 
     pg.display.flip()
@@ -256,7 +268,7 @@ def distance(x, y):
     return math.sqrt(x**2 + y**2)
 
 
-def update_values(quit, rkey, stkey, shoot, xb, yb, strokes):
+def update_values(quit, rkey, skey, shoot, xb, yb, strokes, x_bounded):
     for event in pg.event.get():
         if event.type == pg.QUIT:
             quit = True
@@ -274,19 +286,33 @@ def update_values(quit, rkey, stkey, shoot, xb, yb, strokes):
                     rkey -= 1
 
             if event.key == pg.K_UP:
-                if stkey != max(strength_dict):
-                    stkey += 1
+                if skey != max(strength_dict):
+                    skey += 1
 
             if event.key == pg.K_DOWN:
-                if stkey != min(strength_dict):
-                    stkey -= 1
+                if skey != min(strength_dict):
+                    skey -= 1
+
+            if event.key == pg.K_b:
+                x_bounded = not x_bounded
+
+            if event.key == pg.K_q:
+                rkey = min(resist_dict)
+                skey = max(strength_dict)
+                x_bounded = True
+
+            if event.key == pg.K_e:
+                rkey = max(resist_dict)
+                skey = max(strength_dict)
+                x_bounded = False
+
 
         if event.type == pg.MOUSEBUTTONDOWN:
             if not shoot:
                 shoot, stop = True, False
                 strokes, xb, yb = hit_ball(strokes)
 
-    return quit, rkey, stkey, shoot, xb, yb, strokes
+    return quit, rkey, skey, shoot, xb, yb, strokes, x_bounded
 
 
 def hit_ball(strokes):
@@ -319,63 +345,66 @@ def initialize():
 rad, deg = math.pi/180, 180/math.pi
 x, y, power, ang, strokes = [0]*5
 xb, yb = None, None
-shoot, penalty, stop, quit = [False]*4
+shoot, penalty, stop, quit, x_bounded = [False]*5
 p_ticks, update_frame = 0, 0
 
 ball = Ball(Constants.START_X, Constants.START_Y)
 
 clock = pg.time.Clock()
 
-strength_dict = {0: .01, 1: .02, 2: .04, 3: .08, 4: .16, 5: .25, 6: .50, 7: .75, 8: 1}; stkey = 6
+strength_dict = {0: .01, 1: .02, 2: .04, 3: .08, 4: .16, 5: .25, 6: .50, 7: .75, 8: 1}; skey = 6
 resist_dict = {0: 0, 1: .01, 2: .02, 3: .03, 4: .04, 5: .05, 6: .1, 7: .2, 8: .3, 9: .4, 10: .5, 11: .6, 12: .7,
                13: .8, 14: .9, 15: 1, 16: 1.25, 17: 1.5, 18: 1.75, 19: 2, 20: 2.5, 21: 3, 22: 3.5, 23: 4, 24: 4.5,
                25: 5}; rkey = 7
 
-window = initialize()
-while not quit:
-    power_multiplier = strength_dict[stkey]
-    resist_multiplier = resist_dict[rkey]
 
-    seconds = (pg.time.get_ticks()-p_ticks)/1000
-    if seconds > 1.2: penalty = False
+if __name__ == '__main__':
 
-    cursor_pos = pg.mouse.get_pos()
-    line = [(ball.x, ball.y), cursor_pos]
-    line_ball_x, line_ball_y = cursor_pos[0] - ball.x, cursor_pos[1] - ball.y
+    window = initialize()
+    while not quit:
+        power_multiplier = strength_dict[skey]
+        resist_multiplier = resist_dict[rkey]
 
-    aline = [(ball.x, ball.y), (ball.x + .015 * Constants.SCREEN_WIDTH, ball.y)]
+        seconds = (pg.time.get_ticks()-p_ticks)/1000
+        if seconds > 1.2: penalty = False
 
-    if not shoot:
-        power_display = round(
-            distance(line_ball_x, line_ball_y) * power_multiplier/5)
+        cursor_pos = pg.mouse.get_pos()
+        line = [(ball.x, ball.y), cursor_pos]
+        line_ball_x, line_ball_y = cursor_pos[0] - ball.x, cursor_pos[1] - ball.y
 
-        angle_display = round(angle(cursor_pos) * deg)
+        aline = [(ball.x, ball.y), (ball.x + .015 * Constants.SCREEN_WIDTH, ball.y)]
 
-    else:
-        if stop or (abs(ball.vy) < 5 and abs(ball.vx) < 1 and abs(ball.y - (Constants.START_Y - 2)) <= Constants.BOUNCE_FUZZ):
-            shoot = False
-            #ball.y = Constants.START_Y
-            print('\nThe ball has come to a rest!')
-            update_frame = 0
+        if not shoot:
+            power_display = round(
+                distance(line_ball_x, line_ball_y) * power_multiplier/5)
+
+            angle_display = round(angle(cursor_pos) * deg)
+
         else:
-            update_frame, shoot, stop = ball.update(update_frame)
-
-        if not Constants.X_BOUNDS_BARRIER < ball.x < Constants.SCREEN_WIDTH:
-            shoot = False
-            print(f'\nOut of Bounds! Pos: {round(ball.x), round(ball.y)}')
-            penalty = True
-            p_ticks = pg.time.get_ticks()
-            strokes += 1
-
-            if Constants.X_BOUNDS_BARRIER < xb < Constants.SCREEN_WIDTH:
-                ball.x = xb
+            if stop or (abs(ball.vy) < 5 and abs(ball.vx) < 1 and abs(ball.y - (Constants.START_Y - 2)) <= Constants.BOUNCE_FUZZ):
+                shoot = False
+                #ball.y = Constants.START_Y
+                print('\nThe ball has come to a rest!')
+                update_frame = 0
             else:
-                ball.x = Constants.START_X
-            ball.y = yb
+                update_frame, shoot, stop = ball.update(update_frame)
 
-    quit, rkey, stkey, shoot, xb, yb, strokes = update_values(quit, rkey, stkey, shoot, xb, yb, strokes)
+            if not Constants.X_BOUNDS_BARRIER < ball.x < Constants.SCREEN_WIDTH:
+                shoot = False
+                print(f'\nOut of Bounds! Pos: {round(ball.x), round(ball.y)}')
+                penalty = True
+                p_ticks = pg.time.get_ticks()
+                strokes += 1
 
-    draw_window()
+                if Constants.X_BOUNDS_BARRIER < xb < Constants.SCREEN_WIDTH:
+                    ball.x = xb
+                else:
+                    ball.x = Constants.START_X
+                ball.y = yb
 
-print("\nShutting down...")
-pg.quit()
+        quit, rkey, skey, shoot, xb, yb, strokes, x_bounded = update_values(quit, rkey, skey, shoot, xb, yb, strokes, x_bounded)
+
+        draw_window()
+
+    print("\nShutting down...")
+    pg.quit()
